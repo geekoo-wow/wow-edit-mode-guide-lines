@@ -1,0 +1,18 @@
+## Interface: 16001, 120000, 120001, 120005, 120007, 120100
+## Interface-Retail: 120000, 120001, 120005, 120007, 120100
+## Interface-Forever: 16001
+## Title: EditModeGuideLines
+## Notes: Guide lines for Edit Mode: centered vertical or horizontal pairs at any percentage of the screen, in any color, that frames snap to.
+## Author: geekoo-wow
+## Version: @project-version@
+## SavedVariables: EditModeGuideLinesDB
+## Category: User Interface
+
+Core.lua
+Guides.lua
+Config.lua
+Lines.lua
+Snap.lua
+UI.lua
+Commands.lua
+Init.lua
