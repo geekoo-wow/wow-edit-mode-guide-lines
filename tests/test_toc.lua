@@ -42,3 +42,8 @@ test("the TOC declares the SavedVariables the addon uses", function()
   local _, d = T.tocLines(T.TOC)
   eq(d.SavedVariables, "EditModeGuideLinesDB")
 end)
+
+test("the TOC names the CurseForge project the release workflow uploads to", function()
+  local _, d = T.tocLines(T.TOC)
+  truthy(d["X-Curse-Project-ID"] and d["X-Curse-Project-ID"]:match("^%d+$"), "X-Curse-Project-ID")
+end)

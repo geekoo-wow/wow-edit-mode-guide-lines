@@ -27,9 +27,9 @@ Rules:
 ### Releasing
 
 1. Ensure every user-facing commit since the last tag carries its `Changelog:` trailers.
-2. `git tag -a vX.Y.Z -m "EditModeGuideLines vX.Y.Z"` (annotated — the packager derives `@project-version@` from it)
+2. `git tag -a vX.Y.Z -m "EditModeGuideLines vX.Y.Z"` (annotated — the packager derives `@project-version@` from it). A tag with `alpha` or `beta` in its name, e.g. `v0.1.0-alpha.1`, is published as an alpha or beta file on CurseForge and as a GitHub pre-release.
 3. `git push origin vX.Y.Z`
 
-CI then runs lint and tests, packages the addon, creates the GitHub release with the generated notes, and uploads to CurseForge and Wago once the TOC carries an `X-Curse-Project-ID` / `X-Wago-ID`. If no commit since the previous tag has a `Changelog:` trailer, the notes say "Maintenance release."
+CI then runs lint and tests, packages the addon, creates the GitHub release with the generated notes, and uploads to CurseForge (project 1734653, from `X-Curse-Project-ID` in the TOC). If no commit since the previous tag has a `Changelog:` trailer, the notes say "Maintenance release."
 
 Every branch push also builds the addon zip without publishing it; download it from the workflow run's **Artifacts** to try a build in game before tagging.

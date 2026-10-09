@@ -7,7 +7,9 @@ own snapping pulls frames onto them, the same way it snaps to the grid.
 A guide is **centered**: it marks a band of the screen a given percentage
 wide (or tall) and draws the two lines that bound it. A vertical 50% guide
 on a 1000 px wide screen draws lines at 250 px and 750 px; a 0% guide is one
-line through the middle, 100% the screen edges.
+line through the middle, 100% the screen edges. That makes it easy to build
+multi-area layouts on ultrawide screens: one guide marks the band the HUD
+lives in, another the side areas, and every frame snaps to their edges.
 
 > Prototype. Built against the Forever beta, which uses the Mainline
 > (12.1-era) addon API, not the Classic one; retail uses the same API. The
@@ -30,7 +32,8 @@ base `## Interface:` line.
 
 ## Install
 
-1. Download `EditModeGuideLines-<version>.zip` from the GitHub releases page
+1. Install it from CurseForge (project 1734653) with your addon manager, or
+   download `EditModeGuideLines-<version>.zip` from the GitHub releases page
    and unzip it into the client's `Interface/AddOns/` (you should end up with
    `Interface/AddOns/EditModeGuideLines/`).
 2. Open Edit Mode (Game Menu > Edit Mode). The **Guide lines** panel opens
@@ -158,9 +161,12 @@ publishing it: download it from the run's **Artifacts** to try a build in game.
 
 Push an annotated `v*` tag. CI runs lint and tests, generates the release
 notes from `Changelog:` commit trailers, packages the addon with the
-[BigWigs packager](https://github.com/BigWigsMods/packager) and publishes a
-GitHub release. The commit convention and steps are in
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[BigWigs packager](https://github.com/BigWigsMods/packager), publishes a
+GitHub release and uploads it to CurseForge (project 1734653, from
+`X-Curse-Project-ID` in the TOC). A tag with `alpha` or `beta` in its name
+(`v0.1.0-alpha.1`) is published as an alpha or beta file and a GitHub
+pre-release; any other tag is a release. The commit convention and steps are
+in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
