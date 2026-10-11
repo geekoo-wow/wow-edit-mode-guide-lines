@@ -13,9 +13,9 @@ line through the middle, 100% the screen edges. That makes it easy to build
 multi-area layouts on ultrawide screens: one guide marks the band the HUD
 lives in, another the side areas, and every frame snaps to their edges.
 
-> Prototype. Built against the Forever beta, which uses the Mainline
-> (12.1-era) addon API, not the Classic one; retail uses the same API. The
-> Edit Mode internals it relies on are identical on both clients.
+> Built against the Forever beta, which uses the Mainline (12.1-era) addon
+> API, not the Classic one; retail uses the same API. The Edit Mode
+> internals it relies on are identical on both clients.
 
 ## Supported clients
 
@@ -66,16 +66,17 @@ Settings (in the panel and in Options > AddOns > EditModeGuideLines):
   default they appear with the Edit Mode window and go away with it.
 - **Draw above frames**: draw the guides over the UI instead of behind it.
 - **Thickness**: line thickness in screen pixels (1 to 8).
-- **Show the guide panel in Edit Mode** (settings only): whether the panel
-  opens with Edit Mode. `/emg` or `/emg panel` opens it on demand.
+- **Show the guide panel in Edit Mode and Unlock Mode** (settings only):
+  whether the panel opens with Edit Mode (and with EllesmereUI's Unlock
+  Mode). `/emg` or `/emg panel` opens it on demand.
 
 Guides are saved per account (`EditModeGuideLinesDB`) and apply to every
 Edit Mode layout.
 
 ## Slash commands
 
-`/emg` (or `/guidelines`) opens the panel in Edit Mode, the settings
-otherwise. Everything the panel does is also a command:
+`/emg` (or `/guidelines`) opens the panel while Edit Mode or Unlock Mode is
+open, the settings otherwise. Everything the panel does is also a command:
 
 ```
 /emg add v 50 green        add a vertical guide: lines at 25% and 75%
@@ -90,7 +91,8 @@ otherwise. Everything the panel does is also a command:
 /emg show | hide           show the guides outside Edit Mode, or not
 /emg above                 toggle drawing above the frames
 /emg thickness 2           line thickness in pixels
-/emg panel | editmode      open the panel, open Edit Mode
+/emg panel                 open the panel
+/emg editmode | unlock     open Edit Mode, or EllesmereUI's Unlock Mode
 ```
 
 Colors: `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `orange`,
@@ -162,9 +164,9 @@ None** turn the guides off along with everything else.
 - **Forever beta SavedVariables bug**: the beta saves SavedVariables on logout
   but doesn't load them on startup, so guides won't survive a restart there
   until Blizzard fixes it (the Forever Data Protect addon works around it).
-- Not yet verified in game; the WoW API (and EllesmereUI's Unlock Mode API)
-  is mocked in the tests, and the panel is only checked for wiring, not
-  layout.
+- The automated tests run against a mocked WoW API (and a mocked EllesmereUI
+  Unlock Mode API), so they cover the logic and the wiring, not in-game
+  layout; the panel's look is only checked in game.
 
 ## Development
 
