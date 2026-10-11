@@ -1,7 +1,9 @@
 -- Lines.lua — draws the guides. One full-screen frame under UIParent holds a
 -- pool of Line textures, one per guide line. Positions are rounded to whole
--- screen pixels, and those same rounded positions are what Snap.lua registers,
--- so a frame that snaps to a guide lands exactly on the drawn line.
+-- screen pixels, and those same rounded positions are what Snap.lua registers
+-- (and Unlock.lua hands to EllesmereUI), so a frame that snaps to a guide
+-- lands exactly on the drawn line. The lines are visible while Edit Mode or
+-- EllesmereUI's Unlock Mode is open, or always with showOutsideEditMode.
 
 local _, ns = ...
 ns = ns or {}
@@ -13,6 +15,8 @@ local container      -- the full-screen frame; nil until Lines.Init
 local pool = {}      -- Line textures, reused between refreshes
 local targets = {}   -- the lines currently drawn: { orientation, coord, color, guide }
 local editModeShown = false
+local unlockShown = false   -- an EllesmereUI Unlock Mode session is open
+local inCombat = false
 
 -- Screen pixels per UIParent unit. The UI is 768 units tall at scale 1
 -- whatever the resolution, so a unit is (physical height / 768) pixels,
@@ -57,7 +61,8 @@ end
 -- The lines currently drawn (recomputed by Refresh).
 function Lines.Targets() return targets end
 
--- What Snap.lua registers: the drawn lines, or nothing while the addon is off.
+-- What Snap.lua registers and Unlock.lua hands out: the drawn lines, or
+-- nothing while the addon is off.
 function Lines.SnapTargets()
   if not (ns.db and ns.db.enabled) then return {} end
   return targets
@@ -75,12 +80,16 @@ end
 function Lines.UpdateVisibility()
   if not container then return end
   local db = ns.db
-  local shown = db.enabled and #targets > 0 and (editModeShown or db.showOutsideEditMode)
+  -- Unlock Mode suspends itself in combat (its grid and movers hide until
+  -- the fight is over); the guides follow it.
+  local unlock = unlockShown and not inCombat
+  local shown = db.enabled and #targets > 0 and (editModeShown or unlock or db.showOutsideEditMode)
   container:SetShown(shown and true or false)
 end
 
--- Recompute and redraw everything, then re-register the snap targets. Called
--- after every config change and whenever the screen or the UI scale changes.
+-- Recompute and redraw everything, then re-register the snap targets (Edit
+-- Mode's and Unlock Mode's). Called after every config change and whenever
+-- the screen or the UI scale changes.
 function Lines.Refresh()
   if not container then return end
   local db = ns.db
@@ -109,6 +118,7 @@ function Lines.Refresh()
   container:SetFrameStrata(db.aboveFrames and "HIGH" or "BACKGROUND")
   Lines.UpdateVisibility()
   if ns.Snap then ns.Snap.Apply() end
+  if ns.Unlock then ns.Unlock.Apply() end
 end
 
 function Lines.SetEditModeShown(shown)
@@ -117,6 +127,18 @@ function Lines.SetEditModeShown(shown)
 end
 
 function Lines.IsEditModeShown() return editModeShown end
+
+function Lines.SetUnlockShown(shown)
+  unlockShown = shown and true or false
+  if unlockShown then Lines.Refresh() else Lines.UpdateVisibility() end
+end
+
+function Lines.IsUnlockShown() return unlockShown end
+
+function Lines.SetInCombat(v)
+  inCombat = v and true or false
+  Lines.UpdateVisibility()
+end
 
 function Lines.Init()
   if container then return end

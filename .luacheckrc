@@ -8,6 +8,7 @@ read_globals = {
   "CreateFrame", "UIParent", "GameTooltip", "DEFAULT_CHAT_FRAME",
   "hooksecurefunc", "wipe", "GetPhysicalScreenSize", "IsLoggedIn", "InCombatLockdown", "ShowUIPanel",
   "EditModeManagerFrame", "EditModeMagnetismManager", "ColorPickerFrame", "Settings",
+  "EllesmereUI",
 }
 
 globals = { "EditModeGuideLinesDB", "SlashCmdList", "SLASH_EDITMODEGUIDELINES1", "SLASH_EDITMODEGUIDELINES2" }

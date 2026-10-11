@@ -1,9 +1,10 @@
 -- tests/mock_wow.lua — just enough of the WoW API to run EditModeGuideLines
 -- offline: frames with points, sizes and scripts, Line textures, a UIParent
 -- with a screen rect, Blizzard's Edit Mode objects (the manager frame with
--- its grid, the magnetism manager), the color picker, Settings and slash
--- commands. Tests drive the game side through the helpers at the bottom and
--- read back what the addon drew, registered and printed.
+-- its grid, the magnetism manager), EllesmereUI's Unlock Mode API (on
+-- request), the color picker, Settings and slash commands. Tests drive the
+-- game side through the helpers and read back what the addon drew,
+-- registered and printed.
 
 local M = {}
 
@@ -104,6 +105,12 @@ function Widget:CreateLine()
   return line
 end
 function Widget:GetStringHeight() return 12 end
+-- Only the one layout the addon's strips use: CENTER at an offset from
+-- UIParent's bottom-left corner.
+function Widget:GetCenter()
+  local p = self.points[1]
+  if p and p[1] == "CENTER" and p[2] == _G.UIParent and p[3] == "BOTTOMLEFT" then return p[4], p[5] end
+end
 function Widget:GetEffectiveScale() return 1 end
 
 function _G.CreateFrame(kind, name, parent, template)
@@ -132,10 +139,13 @@ function UIParent:GetEffectiveScale() return M.uiScale end
 
 function _G.GetPhysicalScreenSize() return M.screen.width, M.screen.height end
 
--- Called by the game when UIParent is resized; the magnetism manager hooks it.
-function _G.UpdateUIParentPosition()
+-- Called by the game when UIParent is resized; the magnetism manager hooks
+-- it, and so does the addon (hooksecurefunc wraps the global in place), so
+-- reset() puts the pristine function back or every test's hooks would stack.
+local function updateUIParentPosition()
   if _G.EditModeMagnetismManager then _G.EditModeMagnetismManager:UpdateTopLevelParentPoints() end
 end
+_G.UpdateUIParentPosition = updateUIParentPosition
 
 -- Change the screen as the game would, firing the same notifications.
 function M.resize(width, height, uiScale)
@@ -217,6 +227,105 @@ function M.snapLines(orientation)
   return out
 end
 
+-- ---- EllesmereUI ----------------------------------------------------------
+
+-- The public Unlock Mode API from the header of EllesmereUI's
+-- EUI_UnlockMode.lua (listeners, element registration with the same field
+-- aliasing) and its EllesmereUI.MakeUnlockElement factory (left out with
+-- opts.noFactory, like an older build). EllesmereUI pcalls listeners; the
+-- mock calls them directly so test failures show.
+M.ellesmereBannerHeight = 60   -- the hover zone's height, UIParent units
+
+local FIELD_ALIASES = {
+  savePos = "savePosition", loadPos = "loadPosition", clearPos = "clearPosition", applyPos = "applyPosition",
+}
+
+function M.buildEllesmere(opts)
+  opts = opts or {}
+  local E = {
+    _unlockModeListeners = {}, _unlockModeSessionActive = false,
+    _unlockRegisteredElements = {}, _unlockRegistrationDirty = false,
+  }
+  function E:RegisterUnlockModeListener(owner, listener)
+    self._unlockModeListeners[owner] = listener
+    if self._unlockModeSessionActive then listener(true) end
+  end
+  function E:UnregisterUnlockModeListener(owner) self._unlockModeListeners[owner] = nil end
+  function E:IsUnlockModeActive() return self._unlockModeSessionActive == true end
+  function E:_NotifyUnlockModeListeners(active, closeAction)
+    self._unlockModeSessionActive = active == true
+    for _, listener in pairs(self._unlockModeListeners) do listener(self._unlockModeSessionActive, closeAction) end
+  end
+  function E:RegisterUnlockElements(elements, folder)
+    for _, elem in ipairs(elements) do
+      for short, long in pairs(FIELD_ALIASES) do
+        if elem[short] and not elem[long] then elem[long] = elem[short] end
+      end
+      if folder and not elem.folder then elem.folder = folder end
+      self._unlockRegisteredElements[elem.key] = elem
+    end
+    self._unlockRegistrationDirty = true
+    M.unlockRegistrations = M.unlockRegistrations + 1
+    M.unlockHiddenOnRegister = {}
+    for key, elem in pairs(self._unlockRegisteredElements) do
+      M.unlockHiddenOnRegister[key] = elem.isHidden and elem.isHidden(key) or false
+    end
+  end
+  function E:UnregisterUnlockElement(key) self._unlockRegisteredElements[key] = nil end
+  if not opts.noFactory then
+    -- The whitelist, as EllesmereUI.lua has it.
+    function E.MakeUnlockElement(o)
+      return {
+        key = o.key, label = o.label, group = o.group, order = o.order,
+        getFrame = o.getFrame, getSize = o.getSize,
+        savePosition = o.savePos, loadPosition = o.loadPos, clearPosition = o.clearPos, applyPosition = o.applyPos,
+        isHidden = o.isHidden, isAnchored = o.isAnchored, keepMoverWhenAnchored = o.keepMoverWhenAnchored,
+        noResize = o.noResize, noAnchorTo = o.noAnchorTo, noAnchorTarget = o.noAnchorTarget,
+        noSizeMatchTarget = o.noSizeMatchTarget,
+      }
+    end
+  end
+  local zone = newWidget("Frame", nil, UIParent)
+  zone.shown = false
+  function zone:GetBottom() return UIParent:GetHeight() - M.ellesmereBannerHeight end
+  function E:GetUnlockModeTopBarAnchor() return zone end
+  function E:OpenUnlockMode()
+    if _G.InCombatLockdown() then return end
+    M.enterUnlock()
+  end
+  _G.EllesmereUI = E
+  M.ellesmere = E
+  return E
+end
+
+function M.removeEllesmere()
+  _G.EllesmereUI = nil
+  M.ellesmere = nil
+end
+
+function M.enterUnlock() M.ellesmere:_NotifyUnlockModeListeners(true) end
+function M.exitUnlock(action) M.ellesmere:_NotifyUnlockModeListeners(false, action or "exit") end
+
+-- The movers EllesmereUI would build for the registered elements, with the
+-- rect its Sync gives a "tiny anchor" element (a frame under 10 units wide):
+-- centered on the element frame's center, sized by getSize. Keyed by element
+-- key: { label, group, order, hidden, left, right, top, bottom, elem }.
+function M.unlockMovers()
+  local out = {}
+  for key, elem in pairs(M.ellesmere._unlockRegisteredElements) do
+    local f = elem.getFrame(key)
+    local cx, cy = f:GetCenter()
+    local w, h, yOff = elem.getSize(key)
+    cy = cy + (yOff or 0)
+    out[key] = {
+      label = elem.label, group = elem.group, order = elem.order, elem = elem,
+      hidden = elem.isHidden and elem.isHidden(key) or false,
+      left = cx - w / 2, right = cx + w / 2, top = cy + h / 2, bottom = cy - h / 2,
+    }
+  end
+  return out
+end
+
 -- ---- color picker ---------------------------------------------------------
 
 function M.newColorPicker()
@@ -291,7 +400,10 @@ function M.reset()
   M.opened, M.colorPicker = nil, nil
   M.picked = { r = 0, g = 0, b = 0, a = 1 }
   M.inCombat, M.loggedIn, M.cannotEnterEditMode = false, false, false
+  M.unlockRegistrations, M.unlockHiddenOnRegister = 0, {}
+  _G.UpdateUIParentPosition = updateUIParentPosition
   M.buildEditMode()
+  M.removeEllesmere()
   _G.ColorPickerFrame = M.newColorPicker()
   _G.SlashCmdList = {}
 end

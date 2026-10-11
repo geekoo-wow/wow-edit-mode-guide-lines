@@ -99,15 +99,19 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("UI_SCALE_CHANGED")
 frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 
--- Everything that needs Blizzard's Edit Mode frames waits for login, when
--- all of the default UI has loaded.
+-- Everything that needs Blizzard's Edit Mode frames (or EllesmereUI) waits
+-- for login, when all of the default UI and every addon has loaded. Unlock
+-- goes last: its listener may fire at once and needs the lines and UI ready.
 local function onLogin()
   if ns.loggedIn then return end
   ns.loggedIn = true
   ns.Lines.Init()
   ns.Snap.Init()
   ns.UI.Init()
+  ns.Unlock.Init()
 end
 
 frame:SetScript("OnEvent", function(_, event, arg)
@@ -120,5 +124,7 @@ frame:SetScript("OnEvent", function(_, event, arg)
     if ns.db then onLogin() end
   elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
     if ns.Lines then ns.Lines.Refresh() end
+  elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
+    if ns.Lines then ns.Lines.SetInCombat(event == "PLAYER_REGEN_DISABLED") end
   end
 end)

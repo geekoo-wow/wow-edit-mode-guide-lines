@@ -28,12 +28,14 @@ local function tocFiles() return (tocLines(TOC)) end
 
 -- Loads the addon like the client does: each file gets (addonName, ns), then
 -- ADDON_LOADED (SavedVariables init) and PLAYER_LOGIN (Edit Mode wiring).
--- opts.noEditMode loads without Blizzard's Edit Mode objects, opts.noLogin
--- stops before PLAYER_LOGIN. Returns ns.
+-- opts.noEditMode loads without Blizzard's Edit Mode objects, opts.ellesmere
+-- (true, or a table of options for mock.buildEllesmere) loads with
+-- EllesmereUI present, opts.noLogin stops before PLAYER_LOGIN. Returns ns.
 local function loadAddon(savedVars, opts)
   opts = opts or {}
   mock.reset()
   if opts.noEditMode then mock.removeEditMode() end
+  if opts.ellesmere then mock.buildEllesmere(type(opts.ellesmere) == "table" and opts.ellesmere or nil) end
   _G.EditModeGuideLinesDB = savedVars
   local ns = {}
   for _, f in ipairs(tocFiles()) do
@@ -102,7 +104,7 @@ function T.test(name, fn) tests[#tests + 1] = { name = name, fn = fn } end
 
 for _, f in ipairs({
   "tests/test_toc.lua", "tests/test_guides.lua", "tests/test_config.lua", "tests/test_lines.lua",
-  "tests/test_snap.lua", "tests/test_ui.lua", "tests/test_commands.lua",
+  "tests/test_snap.lua", "tests/test_unlock.lua", "tests/test_ui.lua", "tests/test_commands.lua",
 }) do
   assert(loadfile(f))(T)
 end

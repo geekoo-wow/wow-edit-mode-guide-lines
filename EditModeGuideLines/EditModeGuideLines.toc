@@ -2,18 +2,20 @@
 ## Interface-Retail: 120000, 120001, 120005, 120007, 120100
 ## Interface-Forever: 16001
 ## Title: EditModeGuideLines
-## Notes: Guide lines for Edit Mode: centered vertical or horizontal pairs at any percentage of the screen, in any color, that frames snap to.
+## Notes: Guide lines for Edit Mode and EllesmereUI's Unlock Mode: centered vertical or horizontal pairs at any percentage of the screen, in any color, that frames snap to.
 ## Author: geekoo-wow
 ## Version: @project-version@
 ## SavedVariables: EditModeGuideLinesDB
 ## Category: User Interface
 ## X-Curse-Project-ID: 1734653
+## OptionalDeps: EllesmereUI
 
 Core.lua
 Guides.lua
 Config.lua
 Lines.lua
 Snap.lua
+Unlock.lua
 UI.lua
 Commands.lua
 Init.lua

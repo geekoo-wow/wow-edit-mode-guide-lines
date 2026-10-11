@@ -1,5 +1,6 @@
 -- Commands.lua — /emg (alias /guidelines). Everything the panel does, from
--- chat, plus a few quick toggles. All changes go through ns.Config.
+-- chat, plus a few quick toggles and the two editors' openers. All changes
+-- go through ns.Config.
 
 local _, ns = ...
 ns = ns or {}
@@ -18,7 +19,8 @@ local HELP = {
   "/emg del <n> | clear — remove guide n, or all guides",
   "/emg percent <n> <percent> | flip <n> | color <n> <color> | toggle <n> — edit guide n",
   "/emg on | off — enable or disable the addon; show | hide — guides outside Edit Mode",
-  "/emg above | thickness <px> | panel | editmode — drawing order, line thickness, the panel, open Edit Mode",
+  "/emg above | thickness <px> | panel — drawing order, line thickness, open the panel",
+  "/emg editmode | unlock — open Edit Mode, or EllesmereUI's Unlock Mode",
   "Colors: " .. table.concat(Guides.COLOR_NAMES, ", ") .. ", or hex like #ff8800",
 }
 
@@ -103,6 +105,8 @@ function Commands.Run(msg)
     if not ns.UI.ShowPanel() then ns.Print("the panel is unavailable on this client") end
   elseif cmd == "editmode" then
     ns.UI.OpenEditMode()
+  elseif cmd == "unlock" then
+    ns.Unlock.Open()
   else
     ns.Print("unknown command; see /emg help")
   end

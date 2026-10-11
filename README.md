@@ -2,7 +2,9 @@
 
 Guide lines for Edit Mode, on **retail WoW** and **WoW: Forever**. Create as
 many vertical or horizontal guides as you like, in any color, and the game's
-own snapping pulls frames onto them, the same way it snaps to the grid.
+own snapping pulls frames onto them, the same way it snaps to the grid. With
+[EllesmereUI](https://github.com/EllesmereGaming/EllesmereUI) installed the
+same guides show, and snap, in its Unlock Mode too.
 
 A guide is **centered**: it marks a band of the screen a given percentage
 wide (or tall) and draws the two lines that bound it. A vertical 50% guide
@@ -37,7 +39,8 @@ base `## Interface:` line.
    and unzip it into the client's `Interface/AddOns/` (you should end up with
    `Interface/AddOns/EditModeGuideLines/`).
 2. Open Edit Mode (Game Menu > Edit Mode). The **Guide lines** panel opens
-   next to the Edit Mode window.
+   next to the Edit Mode window. (EllesmereUI users: open its Unlock Mode
+   instead; see below.)
 3. Make sure **Snap to Frames** is ticked in the Edit Mode window: that is
    the game's own switch for snapping, and the guides use it.
 
@@ -115,6 +118,38 @@ addon's guide frames.
 Positions are rounded to whole screen pixels before they are drawn and
 registered, so a snapped frame sits exactly on the drawn line.
 
+## EllesmereUI's Unlock Mode
+
+[EllesmereUI](https://github.com/EllesmereGaming/EllesmereUI) replaces Edit
+Mode with its own layout editor, Unlock Mode: every element gets a draggable
+mover, and movers snap to each other's edges and centers while dragged. With
+EllesmereUI installed (it is an optional dependency, so it loads first):
+
+- The guides appear whenever an Unlock Mode session opens and go away when
+  it closes; while combat suspends the session they hide with it.
+- Elements snap to the guides. Each drawn line is registered with
+  EllesmereUI as an unlock element of its own, through the same public API
+  EllesmereUI's modules use (`RegisterUnlockElements`), and its mover is a
+  hair-thin strip on the line, three and a half screens long. Unlock Mode's
+  own snapping then treats the line like any element's edge: while you
+  drag, an edge or the center of the element snaps to the line, Unlock
+  Mode's accent guide line and white pulse show the line it snapped to, and
+  the lines appear under **Guide Lines** in a mover's Snap Target menu. The
+  strips are position-locked, so they can't be dragged, resized, anchored
+  to or size-matched, and they never save a position.
+- The guide panel docks under the Unlock Mode banner (the same setting as
+  for Edit Mode), and `/emg unlock` or the button in the settings opens
+  Unlock Mode.
+
+What differs from Edit Mode follows from Unlock Mode's own snapping rules:
+snapping happens live while dragging rather than on release, within Unlock
+Mode's snap distance rather than the game's 8 pixels, and against the single
+closest element. A line counts as an element, so an element that overlaps a
+line snaps to it rather than to a neighbor. Unlock Mode draws its accent
+border on every element, so in Unlock Mode each guide shows under a thin
+accent band. Its **Snap Elements** toggle and a mover's **Snap Target >
+None** turn the guides off along with everything else.
+
 ## Known limitations
 
 - Snapping needs Edit Mode's **Snap to Frames** option on, and happens within
@@ -127,8 +162,9 @@ registered, so a snapped frame sits exactly on the drawn line.
 - **Forever beta SavedVariables bug**: the beta saves SavedVariables on logout
   but doesn't load them on startup, so guides won't survive a restart there
   until Blizzard fixes it (the Forever Data Protect addon works around it).
-- Not yet verified in game; the WoW API is mocked in the tests, and the
-  panel is only checked for wiring, not layout.
+- Not yet verified in game; the WoW API (and EllesmereUI's Unlock Mode API)
+  is mocked in the tests, and the panel is only checked for wiring, not
+  layout.
 
 ## Development
 
@@ -143,6 +179,7 @@ Layout:
 - `Config.lua`: the operations on the saved guides and settings (testable offline)
 - `Lines.lua`: draws the lines; `Lines.Compute` turns guides into pixel-aligned coordinates
 - `Snap.lua`: registers the lines with `EditModeMagnetismManager` and keeps them registered
+- `Unlock.lua`: EllesmereUI's Unlock Mode: shows the lines with the session and registers them as snappable elements
 - `UI.lua`: the Edit Mode panel and the settings category; draws widgets and calls `Config`
 - `Commands.lua`: `/emg`
 - `Core.lua`: defaults, SavedVariables (loading, normalizing), events, output helpers
@@ -151,8 +188,9 @@ Layout:
 
 The tests live in `tests/`: `run.lua` loads the addon in TOC order against
 `mock_wow.lua` (a stand-in for the WoW API, including the pieces of Blizzard's
-Edit Mode the addon hooks) once per test, so each test starts from a fresh
-addon and fresh SavedVariables.
+Edit Mode the addon hooks and, on request, EllesmereUI's Unlock Mode API)
+once per test, so each test starts from a fresh addon and fresh
+SavedVariables.
 
 Every push to a branch runs lint and tests, then builds the addon zip without
 publishing it: download it from the run's **Artifacts** to try a build in game.

@@ -1,7 +1,8 @@
--- UI.lua — the guide panel that opens next to the Edit Mode window, and the
--- same editor in Options > AddOns > EditModeGuideLines. This file only draws
--- widgets; every change goes through ns.Config, which redraws the lines and
--- calls ns.OnConfigChanged so whatever is showing gets refreshed.
+-- UI.lua — the guide panel that opens next to the Edit Mode window (or under
+-- EllesmereUI's Unlock Mode banner), and the same editor in Options > AddOns
+-- > EditModeGuideLines. This file only draws widgets; every change goes
+-- through ns.Config, which redraws the lines and calls ns.OnConfigChanged so
+-- whatever is showing gets refreshed.
 
 local _, ns = ...
 ns = ns or {}
@@ -277,7 +278,7 @@ local function BuildEditor(parent, width)
 
   local help = Label(ed, COLOR_DIM .. "A guide is centered: 50% draws two lines, at 25% and 75% of the screen; "
     .. "0% draws one line through the middle. Frames snap to the lines while Edit Mode's "
-    .. "Snap to Frames is on.|r", "GameFontHighlightSmall")
+    .. "Snap to Frames (or Unlock Mode's Snap Elements) is on.|r", "GameFontHighlightSmall")
   help:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, -8)
   help:SetWidth(width)
 
@@ -312,14 +313,38 @@ end
 local PANEL_W = EDITOR_W + 2 * PAD
 local PANEL_H = EDITOR_H + 2 * PAD + 34
 
+-- How far EllesmereUI's Unlock Mode banner reaches down from the top of the
+-- screen, in UIParent units: the bottom of its hover zone, which EllesmereUI
+-- exposes for addons that stack controls below the banner. A guess when the
+-- zone can't be measured.
+local UNLOCK_BANNER_H = 80
+
+function UI.UnlockTopInset()
+  local e = _G.EllesmereUI
+  local zone = e and type(e.GetUnlockModeTopBarAnchor) == "function" and e:GetUnlockModeTopBarAnchor()
+  local bottom = zone and zone.GetBottom and zone:GetBottom()
+  if not bottom then return UNLOCK_BANNER_H end
+  local _, uiBottom, _, uiHeight = UIParent:GetRect()
+  local scale = (zone:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+  return math.max(0, (uiBottom or 0) + (uiHeight or 0) - bottom * scale)
+end
+
+-- Where the panel docks: next to the Edit Mode window while that is open,
+-- under the banner during an Unlock Mode session (above EllesmereUI's
+-- movers, which live in FULLSCREEN_DIALOG), centered otherwise.
 function UI.AnchorPanel()
   local panel = UI.panel
   if not panel then return end
   panel:ClearAllPoints()
   local manager = _G.EditModeManagerFrame
-  if manager then
+  if manager and manager:IsShown() then
+    panel:SetFrameStrata("DIALOG")
     panel:SetPoint("TOPLEFT", manager, "TOPRIGHT", 12, 0)
+  elseif UI.unlockShown then
+    panel:SetFrameStrata("FULLSCREEN_DIALOG")
+    panel:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -PAD, -(UI.UnlockTopInset() + 8))
   else
+    panel:SetFrameStrata("DIALOG")
     panel:SetPoint("CENTER")
   end
 end
@@ -363,6 +388,17 @@ function UI.HidePanel()
   if UI.panel then UI.panel:Hide() end
 end
 
+-- An Unlock Mode session opened or closed (from Unlock.lua).
+function UI.SetUnlockShown(active)
+  UI.unlockShown = active and true or false
+  if UI.unlockShown then
+    if Config.GetSetting("showPanel") then UI.ShowPanel() end
+  else
+    local manager = _G.EditModeManagerFrame
+    if not (manager and manager:IsShown()) then UI.HidePanel() end
+  end
+end
+
 -- ---------------------------------------------------------------------------
 -- Options > AddOns > EditModeGuideLines
 -- ---------------------------------------------------------------------------
@@ -380,16 +416,23 @@ local function BuildSettings()
   local open = Button(f, "Open Edit Mode", 140, function() UI.OpenEditMode() end)
   open:SetPoint("TOPLEFT", s, "BOTTOMLEFT", 0, -12)
   f.openButton = open
-  local showPanel = Check(f, "Show the guide panel in Edit Mode",
-    "Open the guide panel next to the Edit Mode window whenever Edit Mode opens.",
+  if ns.Unlock.Available() then
+    local unlock = Button(f, "Open Unlock Mode", 150, function() ns.Unlock.Open() end)
+    unlock:SetPoint("LEFT", open, "RIGHT", 12, 0)
+    Tooltip(unlock, "Unlock Mode", "Open EllesmereUI's Unlock Mode; the guides show there too.")
+    f.openUnlockButton = unlock
+  end
+  local showPanel = Check(f, "Show the guide panel in Edit Mode and Unlock Mode",
+    "Open the guide panel next to the Edit Mode window whenever Edit Mode opens, "
+    .. "and under the banner whenever EllesmereUI's Unlock Mode opens.",
     function() return Config.GetSetting("showPanel") end,
     function(v) Config.SetSetting("showPanel", v) end)
-  showPanel:SetPoint("LEFT", open, "RIGHT", 16, 0)
+  showPanel:SetPoint("TOPLEFT", open, "BOTTOMLEFT", -4, -6)
   f.showPanelCheck = showPanel
   refreshables[#refreshables + 1] = showPanel
 
   local ed = BuildEditor(f, EDITOR_W)
-  ed:SetPoint("TOPLEFT", open, "BOTTOMLEFT", 0, -14)
+  ed:SetPoint("TOPLEFT", showPanel, "BOTTOMLEFT", 4, -10)
   f.editor = ed
 
   function f:Refresh()
@@ -412,10 +455,12 @@ function UI.Refresh()
   end
 end
 
--- The panel while Edit Mode is open, the settings category otherwise.
+-- The panel while Edit Mode or Unlock Mode is open, the settings category
+-- otherwise.
 function UI.Open()
   local manager = _G.EditModeManagerFrame
-  if UI.panel and manager and manager:IsShown() then return UI.ShowPanel() end
+  local editing = (manager and manager:IsShown()) or UI.unlockShown
+  if UI.panel and editing then return UI.ShowPanel() end
   if UI.category and _G.Settings and _G.Settings.OpenToCategory then
     _G.Settings.OpenToCategory(UI.category:GetID())
     return true
@@ -446,13 +491,16 @@ function UI.Init()
   UI.initialized = true
   ns.OnConfigChanged = UI.Refresh
 
+  UI.panel = BuildPanel()
   local manager = _G.EditModeManagerFrame
   if manager then
-    UI.panel = BuildPanel()
     manager:HookScript("OnShow", function()
       if Config.GetSetting("showPanel") then UI.ShowPanel() end
     end)
-    manager:HookScript("OnHide", function() UI.HidePanel() end)
+    manager:HookScript("OnHide", function()
+      -- Back under the banner if an Unlock Mode session is still open.
+      if UI.unlockShown then UI.AnchorPanel() else UI.HidePanel() end
+    end)
     if manager:IsShown() and Config.GetSetting("showPanel") then UI.ShowPanel() end
   end
 
