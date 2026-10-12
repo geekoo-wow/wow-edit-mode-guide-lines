@@ -31,8 +31,12 @@ README.md for behaviour.
   magnetic frames (`RegisterFrame`): layouts would then be anchored to them.
 - Contract between them: the coordinate Snap registers (and the strip Unlock
   places) is exactly the coordinate Lines drew (all come from
-  `Lines.Targets()`), so a snapped frame lands on the drawn pixel. Keep
-  positions rounded to whole screen pixels.
+  `Lines.Targets()`: `coord`), so a snapped frame lands on the drawn pixel.
+  Keep positions rounded to whole screen pixels. The line itself is drawn on
+  `center`, which is `coord` for an even thickness and half a pixel outward
+  for an odd one, so the quad always covers whole pixels (a 1 px line centered
+  on a pixel boundary straddles two pixels and may not be painted at all);
+  `coord` stays its band-side edge. The lines have texel snapping turned off.
 - `Unlock.lua` is the only place that touches `EllesmereUI`, and only through
   its public API: `RegisterUnlockModeListener`, `IsUnlockModeActive`,
   `GetUnlockModeTopBarAnchor`, `OpenUnlockMode`, `RegisterUnlockElements` and

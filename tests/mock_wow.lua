@@ -95,6 +95,8 @@ function Widget:GetName() return self.name end
 function Widget:SetBackdropColor(r, g, b, a) self.backdropColor = { r = r, g = g, b = b, a = a } end
 function Widget:SetColorTexture(r, g, b, a) self.color = { r = r, g = g, b = b, a = a } end
 function Widget:SetThickness(t) self.thickness = t end
+function Widget:SetSnapToPixelGrid(v) self.snapToPixelGrid = v end
+function Widget:SetTexelSnappingBias(v) self.texelSnappingBias = v end
 function Widget:SetStartPoint(point, rel, x, y) self.startPoint = { point = point, rel = rel, x = x, y = y } end
 function Widget:SetEndPoint(point, rel, x, y) self.endPoint = { point = point, rel = rel, x = x, y = y } end
 function Widget:CreateFontString() return newWidget("FontString", nil, self) end

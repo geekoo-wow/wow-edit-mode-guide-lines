@@ -118,7 +118,10 @@ anchors the frame *to that frame*, which would tie saved layouts to the
 addon's guide frames.
 
 Positions are rounded to whole screen pixels before they are drawn and
-registered, so a snapped frame sits exactly on the drawn line.
+registered, so a snapped frame sits exactly on the drawn line. A line of odd
+thickness (1 px, 3 px, ...) is drawn on whole pixels too, with its odd pixel
+on the outside of the band, so a frame snapped to both lines of a guide fills
+the band exactly and covers neither line.
 
 ## EllesmereUI's Unlock Mode
 
